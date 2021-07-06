@@ -129,8 +129,8 @@ function px_woocommerce_order_status_processing($order_id)
     // Parcours des lignes de commande
     foreach ($order->get_items('line_item') as $k => $item) {
 
-        //$product = $order->get_product_from_item();//deprecated
         /** @var WC_Product $product */
+        //$product = $order->get_product_from_item();//deprecated
         $product = $item->get_product();
 
         $dataLine = $data;
@@ -224,7 +224,7 @@ function px_push_update($transient)
     }
 
     // trying to get from cache first, to disable cache comment 10,20,21,22,24
-    //if(false == $remote = get_transient('px_upgrade_pixisoft_connector')) {
+    if (false == $remote = get_transient('px_upgrade_pixisoft_connector')) {
 
         // info.json is the file with the actual plugin information on your server
         $remote = wp_remote_get('https://raw.githubusercontent.com/leahpar/pixisoft-connector/master/info.json', [
@@ -234,17 +234,21 @@ function px_push_update($transient)
             ]]
         );
 
-    //    if ( !is_wp_error( $remote ) && isset( $remote['response']['code'] ) && $remote['response']['code'] == 200 && !empty( $remote['body'] ) ) {
-    //        set_transient( 'misha_upgrade_YOUR_PLUGIN_SLUG', $remote, 43200 ); // 12 hours cache
-    //    }
+        if (!is_wp_error($remote)
+            && isset($remote['response']['code'])
+            && $remote['response']['code'] == 200
+            && !empty($remote['body'])
+        ) {
+            set_transient('px_upgrade_pixisoft_connector', $remote, 3600);
+        }
+    }
 
-    //}
+    // Infos plugin local
+    $pluginData = get_plugin_data(__FILE__, false, false);
 
     if ($remote) {
 
         $remote = json_decode($remote['body']);
-
-        $pluginData = get_plugin_data("pixisoft-connector/pixisoft-connector.php", false, false);
 
         // your installed plugin version should be on the line below! You can obtain it dynamically of course
         if ($remote
@@ -264,11 +268,11 @@ function px_push_update($transient)
     return $transient;
 }
 
-//add_action( 'upgrader_process_complete', 'px_after_update', 10, 2);
-//function px_after_update($upgrader_object, $options)
-//{
-//    if ($options['action'] == 'update' && $options['type'] === 'plugin') {
-//        // just clean the cache when new plugin version is installed
-//        delete_transient('px_upgrade_pixisoft_connector');
-//    }
-//}
+add_action('upgrader_process_complete', 'px_after_update', 10, 2);
+function px_after_update($upgrader_object, $options)
+{
+    if ($options['action'] == 'update' && $options['type'] === 'plugin') {
+        // just clean the cache when new plugin version is installed
+        delete_transient('px_upgrade_pixisoft_connector');
+    }
+}
