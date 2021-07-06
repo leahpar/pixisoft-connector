@@ -1,0 +1,29 @@
+# GitHub Action: whenever creating a new release of the source code,
+# https://leoloso.com/posts/github-action-to-release-wp-plugin/
+name: Generate Installable Plugin, and Upload as Release Asset
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    name: Upload Release Asset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Create artifact
+        uses: montudor/action-zip@v0.1.0
+        with:
+          args: zip -X -r pixisoft-connector.zip . -x *.git* info.json
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+            name: pixisoft-connector
+            path: pixisoft-connector.zip
+      - name: Upload to release
+        uses: JasonEtco/upload-to-release@master
+        with:
+          args: pixisoft-connector.zip application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
