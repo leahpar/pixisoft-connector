@@ -116,7 +116,6 @@ class Pixisoft_Connector_Core
      * HOOK au paiement d'une commande
      * Génère le fichier de commande pour Pixisoft
      */
-
     function px_woocommerce_order_status_processing($order_id)
     {
         // Option
@@ -174,7 +173,10 @@ class Pixisoft_Connector_Core
         fclose($f);
     }
 
-
+    /**
+     * HOOK de mise à jour des stocks
+     * (déclenché par cron)
+     */
     function px_update_stock()
     {
         // On désactive le hook à la création d'un produit
@@ -205,7 +207,6 @@ class Pixisoft_Connector_Core
                     $product = wc_get_product_object('simple');
                     $product->set_name('Nouveau produit en stock');
                     $product->set_sku($sku);
-                    $product->set_manage_stock(true);
                     $product->set_status('draft');
                 }
 
@@ -214,6 +215,7 @@ class Pixisoft_Connector_Core
                 //echo "</pre>";
 
                 // Mise à jour du stock
+                $product->set_manage_stock(true);
                 $product->set_stock_quantity($qte);
                 $product->save();
             }
