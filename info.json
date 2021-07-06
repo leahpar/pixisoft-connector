@@ -1,0 +1,8 @@
+{
+  "version": "0.2",
+  "download_url" : "https://github.com/leahpar/pixisoft-connector/releases/latest/download/pixisoft-connector.zip",
+  "requires" : "5.7",
+  "tested" : "5.7.1",
+  "requires_php" : "7.4",
+  "last_updated" : "2021-07-06 00:00:00",
+}
