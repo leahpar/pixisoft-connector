@@ -97,6 +97,9 @@ class Pixisoft_Connector_Core
 
         $product = wc_get_product($product_id);
 
+        // Pas d'export du produit s'il n'a pas de SKU
+        if (empty($product->get_sku())) return;
+
         $dir = $this->px_get_ftp_dir('articles');
         $fname = $dir . "/" . "ART" . $px_owner . date('YmdHis') . ".txt";
         $f = fopen($fname, "a");
