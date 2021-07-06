@@ -16,7 +16,7 @@ class Pixisoft_Connector_Core
 
         // Hook à la création/modification d'un produit
         add_action('woocommerce_new_product', [$this, 'px_woocommerce_new_product']);
-        //add_action('woocommerce_update_product', [$this, 'px_woocommerce_new_product']);
+        add_action('woocommerce_update_product', [$this, 'px_woocommerce_new_product']);
 
         // Hook à la validation (paiement OK) d'une commande
         add_action('woocommerce_order_status_processing', [$this, 'px_woocommerce_order_status_processing']);
@@ -99,6 +99,9 @@ class Pixisoft_Connector_Core
 
         // Pas d'export du produit s'il n'a pas de SKU
         if (empty($product->get_sku())) return;
+
+        // Pas d'export du produit s'il n'est pas publié
+        if ($product->get_status() != 'publish') return;
 
         $dir = $this->px_get_ftp_dir('articles');
         $fname = $dir . "/" . "ART" . $px_owner . date('YmdHis') . ".txt";

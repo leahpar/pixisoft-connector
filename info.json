@@ -1,5 +1,5 @@
 {
-  "version": "0.3.1",
+  "version": "0.3.2",
   "download_url" : "https://github.com/leahpar/pixisoft-connector/releases/latest/download/pixisoft-connector.zip",
   "requires" : "5.7",
   "tested" : "5.7.1",
