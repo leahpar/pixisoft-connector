@@ -13,12 +13,11 @@ jobs:
         uses: actions/checkout@v2
       - name: Create output directory
         run:  |
-          mkdir pixisoft-connector
-          cp -r * pixisoft-connector
+          cp -r . pixisoft-connector 2>/dev/null || :
       - name: Create artifact
         uses: montudor/action-zip@v0.1.0
         with:
-          args: zip -X -r pixisoft-connector.zip pixisoft-connector/ -x *.git* info.json
+          args: zip -X -r pixisoft-connector.zip pixisoft-connector -x *.git* info.json
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
