@@ -107,11 +107,12 @@ class Pixisoft_Connector_Core
         $fname = $dir . "/" . "ART" . $px_owner . date('YmdHis') . ".txt";
         $f = fopen($fname, "a");
 
-        fputcsv($f, [
-            $px_owner,
-            $product->get_sku(),
-            $product->get_name(),
-        ]);
+        $data = array_fill(1, 108, null);
+        $data[1] = $px_owner;
+        $data[2] = $product->get_sku();
+        $data[3] = $product->get_name();
+
+        fputcsv($f, $data);
         fclose($f);
     }
 
