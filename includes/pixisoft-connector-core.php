@@ -111,8 +111,11 @@ class Pixisoft_Connector_Core
         $data[1] = $px_owner;
         $data[2] = $product->get_sku();
         $data[3] = $product->get_name();
+        $data[12] = 0; // Gestion par numéro de série
+        $data[13] = 0; // Gestion par lot
+        $data[14] = 1; // Gestion par date de peremption
 
-        fputcsv($f, $data);
+        fputcsv($f, $data, ';', ' ');
         fclose($f);
     }
 
@@ -140,14 +143,14 @@ class Pixisoft_Connector_Core
         $data[4] = $order->get_date_paid()->format("Ymd");
         $data[5] = $order->get_date_paid()->format("Ymd");
         $data[6] = $order->get_customer_id();
-        $data[7] = $order->get_billing_last_name();
+        $data[7] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
         $data[8] = $order->get_billing_address_1();
         $data[9] = $order->get_billing_address_2();
         $data[11] = $order->get_billing_postcode();
         $data[12] = $order->get_billing_city();
         $data[14] = $order->get_billing_country();
         $data[19] = $order->get_customer_id();
-        $data[20] = $order->get_shipping_last_name();
+        $data[7] = $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name();
         $data[21] = $order->get_shipping_address_1();
         $data[22] = $order->get_shipping_address_2();
         $data[24] = $order->get_shipping_postcode();
@@ -155,10 +158,19 @@ class Pixisoft_Connector_Core
         $data[27] = $order->get_shipping_country();
         //$data[29] = $order->get_billing_phone();
         //$data[31] = $order->get_billing_email();
-        $data[32] = null; // TODO: transporteur
-        $data[33] = null; // TODO: méthode de transport
-        $data[39] = null; // TODO: owner
-        $data[44] = null; // TODO: point relais
+        $data[39] = $px_owner;
+
+        // Shipping
+        foreach ($order->get_items('shipping') as $k => $item) {
+
+            //$shipping = $item->get_data();
+            /** @var WC_Order_Item_Shipping $shipping */
+            $shipping = $item;
+
+            $data[32] = "TODO:IDT"; // TODO: transporteur
+            $data[33] = "TODO:IDS"; // TODO: méthode de transport
+            $data[44] = "TODO:IDP"; // TODO: point relais
+        }
 
         // Parcours des lignes de commande
         foreach ($order->get_items('line_item') as $k => $item) {
@@ -171,7 +183,7 @@ class Pixisoft_Connector_Core
             $dataLine[35] = $k;
             $dataLine[36] = $product->get_sku();
             $dataLine[37] = $item->get_quantity();
-            fputcsv($f, $dataLine);
+            fputcsv($f, $dataLine, ';', ' ');
         }
 
         fclose($f);
@@ -195,11 +207,19 @@ class Pixisoft_Connector_Core
             $f = fopen($file, 'r');
 
             // 1 ligne par produit
-            while (($data = fgetcsv($f, 0, ",")) !== FALSE) {
+            while (($data = fgetcsv($f, 0, ";")) !== FALSE) {
 
                 //$sku = $data[2];
                 //$qte = $data[3];
-                list (/* owner */, /* site */, $sku, $qte,) = $data;
+                list (
+                    /* owner */,
+                    /* site */,
+                    $sku,
+                    $qte,
+                    /* unité */,
+                    /* date export */,
+                    /* heure export */,
+                ) = $data;
 
                 $product_id = wc_get_product_id_by_sku($sku);
 
