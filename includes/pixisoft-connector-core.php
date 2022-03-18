@@ -15,8 +15,9 @@ class Pixisoft_Connector_Core
         $this->options();
 
         // Hook à la création/modification d'un produit
-        add_action('woocommerce_new_product', [$this, 'px_woocommerce_new_product']);
-        add_action('woocommerce_update_product', [$this, 'px_woocommerce_new_product']);
+        //add_action('woocommerce_new_product', [$this, 'px_woocommerce_new_product']);
+        //add_action('woocommerce_update_product', [$this, 'px_woocommerce_new_product']);
+        add_action('save_post', [$this, 'px_woocommerce_new_product']);
 
         // Hook à la validation (paiement OK) d'une commande
         add_action('woocommerce_order_status_processing', [$this, 'px_woocommerce_order_status_processing']);
@@ -74,6 +75,42 @@ class Pixisoft_Connector_Core
                             ],
                         ],
                     ],
+                    'rouen-adresse' => [
+                        'Title' => "La Porte Ouverte - Rouen",
+                        'fields' => [
+                            'adresse1'   => [ 'title' => 'Adresse 1'],
+                            'adresse2'   => [ 'title' => 'Adresse 2'],
+                            'codepostal' => [ 'title' => 'Code postal'],
+                            'ville'      => [ 'title' => 'Ville'],
+                        ]
+                    ],
+                    'dieppe-adresse' => [
+                        'Title' => "La Porte Ouverte - Dieppe",
+                        'fields' => [
+                            'adresse1'   => [ 'title' => 'Adresse 1'],
+                            'adresse2'   => [ 'title' => 'Adresse 2'],
+                            'codepostal' => [ 'title' => 'Code postal'],
+                            'ville'      => [ 'title' => 'Ville'],
+                        ]
+                    ],
+                    'cergy-adresse' => [
+                        'Title' => "La Porte Ouverte - Cergy",
+                        'fields' => [
+                            'adresse1'   => [ 'title' => 'Adresse 1'],
+                            'adresse2'   => [ 'title' => 'Adresse 2'],
+                            'codepostal' => [ 'title' => 'Code postal'],
+                            'ville'      => [ 'title' => 'Ville'],
+                        ]
+                    ],
+                    'voisins-adresse' => [
+                        'Title' => "La Porte Ouverte - Voisins",
+                        'fields' => [
+                            'adresse1'   => [ 'title' => 'Adresse 1'],
+                            'adresse2'   => [ 'title' => 'Adresse 2'],
+                            'codepostal' => [ 'title' => 'Code postal'],
+                            'ville'      => [ 'title' => 'Ville'],
+                        ]
+                    ],
                 ],
             ],
         ];
@@ -96,6 +133,9 @@ class Pixisoft_Connector_Core
         if ($this->disable_action_new_product) return;
 
         $product = wc_get_product($product_id);
+
+        // Pas un produit WooCommerce
+        if (!$product) return;
 
         // Pas d'export du produit s'il n'a pas de SKU
         if (empty($product->get_sku())) return;
@@ -150,7 +190,6 @@ class Pixisoft_Connector_Core
         $data[12] = $order->get_billing_city();
         $data[14] = $order->get_billing_country();
         $data[19] = $order->get_customer_id();
-        $data[7] = $order->get_shipping_first_name() . ' ' . $order->get_shipping_last_name();
         $data[21] = $order->get_shipping_address_1();
         $data[22] = $order->get_shipping_address_2();
         $data[24] = $order->get_shipping_postcode();
@@ -167,9 +206,33 @@ class Pixisoft_Connector_Core
             /** @var WC_Order_Item_Shipping $shipping */
             $shipping = $item;
 
-            $data[32] = "TODO:IDT"; // TODO: transporteur
-            $data[33] = "TODO:IDS"; // TODO: méthode de transport
-            $data[44] = "TODO:IDP"; // TODO: point relais
+            // Cronopost / GPS / europexpress
+            $data[32] = "_IDT_"; // TODO: transporteur
+            $data[33] = "_IDS_"; // TODO: méthode de transport
+            //$data[44] = "_IDP_"; // point relais
+
+            // DEBUG
+            $data[32] = $shipping->get_instance_id();
+            $data[33] = $shipping->get_method_id();
+            $data[34] = $shipping->get_name();
+            $data[35] = $shipping->get_type();
+
+            /*
+             Chronopost :
+                IDT = CHRONOPOST
+                IDS = CHRONOPOST
+
+             GLS :
+                IDT = GLS
+                IDS = GLS
+
+             Cas bar :
+                IDT = "EUROP’EXPRESS"
+                IDS = Nom du bar  : <BAR CERGY | BAR ROUEN | BAR VOISINS >
+                TODO:
+                Adresse livraison = adresse bar
+             */
+
         }
 
         // Parcours des lignes de commande
