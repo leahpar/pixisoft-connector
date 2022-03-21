@@ -31,6 +31,17 @@ class Pixisoft_Connector_Core
         add_action('upgrader_process_complete', 'px_after_update', 10, 2);
     }
 
+    static public function log($message)
+    {
+        $dir = self::px_get_ftp_dir('logs');
+        $fname = $dir . "/" . date('Ymd') . ".log";
+        $f = fopen($fname, "a");
+
+        $date = date('[Y-m-d H:i:s]');
+        fwrite($f, "$date $message\n");
+        fclose($f);
+    }
+
     /**
      * Retourne le répertoire de dépôt des fichiers FTP
      * @param $flux
@@ -44,6 +55,7 @@ class Pixisoft_Connector_Core
             'stocks',
             'commandes',
             'livraisons',
+            'logs',
         ])) {
             throw new Exception();
         }
@@ -76,39 +88,39 @@ class Pixisoft_Connector_Core
                         ],
                     ],
                     'rouen-adresse' => [
-                        'Title' => "La Porte Ouverte - Rouen",
+                        'title' => "La Porte Ouverte - Rouen",
                         'fields' => [
-                            'adresse1'   => [ 'title' => 'Adresse 1'],
-                            'adresse2'   => [ 'title' => 'Adresse 2'],
-                            'codepostal' => [ 'title' => 'Code postal'],
-                            'ville'      => [ 'title' => 'Ville'],
+                            'rouen_adresse1'   => [ 'id' => 'rouen_adresse1', 'title' => 'Nom'],
+                            'rouen_adresse2'   => [ 'id' => 'rouen_adresse2', 'title' => 'Adresse'],
+                            'rouen_codepostal' => [ 'id' => 'rouen_codepostal', 'title' => 'Code postal'],
+                            'rouen_ville'      => [ 'id' => 'rouen_ville', 'title' => 'Ville'],
                         ]
                     ],
                     'dieppe-adresse' => [
-                        'Title' => "La Porte Ouverte - Dieppe",
+                        'title' => "La Porte Ouverte - Dieppe",
                         'fields' => [
-                            'adresse1'   => [ 'title' => 'Adresse 1'],
-                            'adresse2'   => [ 'title' => 'Adresse 2'],
-                            'codepostal' => [ 'title' => 'Code postal'],
-                            'ville'      => [ 'title' => 'Ville'],
+                            'dieppe_adresse1'   => [ 'id' => 'dieppe_adresse1', 'title' => 'Nom'],
+                            'dieppe_adresse2'   => [ 'id' => 'dieppe_adresse2', 'title' => 'Adresse'],
+                            'dieppe_codepostal' => [ 'id' => 'dieppe_codepostal', 'title' => 'Code postal'],
+                            'dieppe_ville'      => [ 'id' => 'dieppe_ville', 'title' => 'Ville'],
                         ]
                     ],
                     'cergy-adresse' => [
-                        'Title' => "La Porte Ouverte - Cergy",
+                        'title' => "La Porte Ouverte - Cergy",
                         'fields' => [
-                            'adresse1'   => [ 'title' => 'Adresse 1'],
-                            'adresse2'   => [ 'title' => 'Adresse 2'],
-                            'codepostal' => [ 'title' => 'Code postal'],
-                            'ville'      => [ 'title' => 'Ville'],
+                            'cergy_adresse1'   => [ 'id' => 'cergy_adresse1', 'title' => 'Nom'],
+                            'cergy_adresse2'   => [ 'id' => 'cergy_adresse2', 'title' => 'Adresse'],
+                            'cergy_codepostal' => [ 'id' => 'cergy_codepostal', 'title' => 'Code postal'],
+                            'cergy_ville'      => [ 'id' => 'cergy_ville', 'title' => 'Ville'],
                         ]
                     ],
                     'voisins-adresse' => [
-                        'Title' => "La Porte Ouverte - Voisins",
+                        'title' => "La Porte Ouverte - Voisins",
                         'fields' => [
-                            'adresse1'   => [ 'title' => 'Adresse 1'],
-                            'adresse2'   => [ 'title' => 'Adresse 2'],
-                            'codepostal' => [ 'title' => 'Code postal'],
-                            'ville'      => [ 'title' => 'Ville'],
+                            'voisins_adresse1'   => [ 'id' => 'voisins_adresse1', 'title' => 'Nom'],
+                            'voisins_adresse2'   => [ 'id' => 'voisins_adresse2', 'title' => 'Adresse'],
+                            'voisins_codepostal' => [ 'id' => 'voisins_codepostal', 'title' => 'Code postal'],
+                            'voisins_ville'      => [ 'id' => 'voisins_ville', 'title' => 'Ville'],
                         ]
                     ],
                 ],
@@ -143,8 +155,10 @@ class Pixisoft_Connector_Core
         // Pas d'export du produit s'il n'est pas publié
         if ($product->get_status() != 'publish') return;
 
+        Pixisoft_Connector_Core::log("Update produit $product_id");
+
         $dir = $this->px_get_ftp_dir('articles');
-        $fname = $dir . "/" . "ART" . $px_owner . date('YmdHis') . ".txt";
+        $fname = $dir . "/" . "ART" . $px_owner . date('YmdHi00') . ".txt";
         $f = fopen($fname, "a");
 
         $data = array_fill(1, 108, null);
@@ -175,6 +189,8 @@ class Pixisoft_Connector_Core
         $fname = $dir . "/" . "PREP" . $px_owner . date('YmdHis') . ".txt";
         $f = fopen($fname, "a");
 
+        Pixisoft_Connector_Core::log("Traitement commande #$order_id");
+
         // Données fixes pour la commande
         $data = array_fill(1, 134, null);
         $data[1] = $px_owner;
@@ -190,13 +206,14 @@ class Pixisoft_Connector_Core
         $data[12] = $order->get_billing_city();
         $data[14] = $order->get_billing_country();
         $data[19] = $order->get_customer_id();
+        $data[20] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
         $data[21] = $order->get_shipping_address_1();
         $data[22] = $order->get_shipping_address_2();
         $data[24] = $order->get_shipping_postcode();
         $data[25] = $order->get_shipping_city();
         $data[27] = $order->get_shipping_country();
-        //$data[29] = $order->get_billing_phone();
-        //$data[31] = $order->get_billing_email();
+        $data[29] = $order->get_billing_phone();
+        $data[31] = $order->get_billing_email();
         $data[39] = $px_owner;
 
         // Shipping
@@ -206,32 +223,41 @@ class Pixisoft_Connector_Core
             /** @var WC_Order_Item_Shipping $shipping */
             $shipping = $item;
 
-            // Cronopost / GPS / europexpress
-            $data[32] = "_IDT_"; // TODO: transporteur
-            $data[33] = "_IDS_"; // TODO: méthode de transport
+            switch ($shipping->get_method_id()) {
+                case "chrono13":
+                    $IDT = "CHRONOPOST";
+                    $IDS = "CHRONOPOST";
+                    break;
+                case "gls_chezvous":
+                    $IDT = "GLS";
+                    $IDS = "GLS";
+                    break;
+                case "local_pickup":
+                    // BAR :
+                    $bars = [
+                        4 => "rouen",
+                        5 => "dieppe",
+                        6 => "cergy",
+                        7 => "voisins",
+                    ];
+                    $barId = $shipping->get_instance_id();
+                    $IDT = "EUROP'EXPRESS";
+                    $IDS = "BAR " . strtoupper($bars[$barId]);
+                    $data[21] = $this->px_options[$bars[$barId].'_adresse1'];
+                    $data[22] = $this->px_options[$bars[$barId].'_adresse2'];
+                    $data[24] = $this->px_options[$bars[$barId].'_codepostal'];
+                    $data[25] = $this->px_options[$bars[$barId].'_ville'];
+                    $data[27] = null;
+                    break;
+                default:
+                    $IDT = "XXXXX";
+                    $IDS = "XXXXX";
+                    break;
+            }
+
+            $data[32] = $IDT; // transporteur
+            $data[33] = $IDS; // méthode de transport
             //$data[44] = "_IDP_"; // point relais
-
-            // DEBUG
-            $data[32] = $shipping->get_instance_id();
-            $data[33] = $shipping->get_method_id();
-            $data[34] = $shipping->get_name();
-            $data[35] = $shipping->get_type();
-
-            /*
-             Chronopost :
-                IDT = CHRONOPOST
-                IDS = CHRONOPOST
-
-             GLS :
-                IDT = GLS
-                IDS = GLS
-
-             Cas bar :
-                IDT = "EUROP’EXPRESS"
-                IDS = Nom du bar  : <BAR CERGY | BAR ROUEN | BAR VOISINS >
-                TODO:
-                Adresse livraison = adresse bar
-             */
 
         }
 
@@ -246,6 +272,7 @@ class Pixisoft_Connector_Core
             $dataLine[35] = $k;
             $dataLine[36] = $product->get_sku();
             $dataLine[37] = $item->get_quantity();
+            // NB: 'espace' comme délimiteur car pixisoft veut pas de délimiteur
             fputcsv($f, $dataLine, ';', ' ');
         }
 
@@ -267,9 +294,13 @@ class Pixisoft_Connector_Core
 
         // Parcours des fichiers présents
         foreach ($files as $file) {
+
+            Pixisoft_Connector_Core::log("Import fichier stock $file");
+
             $f = fopen($file, 'r');
 
             // 1 ligne par produit
+            $cpt = 0;
             while (($data = fgetcsv($f, 0, ";")) !== FALSE) {
 
                 //$sku = $data[2];
@@ -305,11 +336,14 @@ class Pixisoft_Connector_Core
                 $product->set_manage_stock(true);
                 $product->set_stock_quantity($qte);
                 $product->save();
+                $cpt++;
             }
             fclose($f);
 
             // Suppression du fichier traité
             unlink($file);
+
+            Pixisoft_Connector_Core::log("$cpt lignes traitées");
         }
 
         //echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';
@@ -380,3 +414,5 @@ class Pixisoft_Connector_Core
     }
 
 }
+
+
