@@ -219,7 +219,6 @@ class Pixisoft_Connector_Core
         // Shipping
         foreach ($order->get_items('shipping') as $k => $item) {
 
-            //$shipping = $item->get_data();
             /** @var WC_Order_Item_Shipping $shipping */
             $shipping = $item;
 
@@ -227,6 +226,10 @@ class Pixisoft_Connector_Core
                 case "chrono13":
                     $IDT = "CHRONOPOST";
                     $IDS = "CHRONOPOST";
+                    break;
+                case "chronorelais":
+                    $IDT = "CHRONOPOST";
+                    $IDS = $shipping->get_instance_id();
                     break;
                 case "gls_chezvous":
                     $IDT = "GLS";
