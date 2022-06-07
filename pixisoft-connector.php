@@ -4,7 +4,7 @@
 Plugin Name: Pixisoft Connector
 Plugin URI: https://github.com/leahpar/pixisoft-connector
 Description: Connecteur WP pour Pixisoft
-Version: 0.4.1
+Version: 0.4.2
 Author: Raphaël Bacco
 Author URI: https://github.com/leahpar
 License: MIT

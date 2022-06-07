@@ -222,14 +222,25 @@ class Pixisoft_Connector_Core
             /** @var WC_Order_Item_Shipping $shipping */
             $shipping = $item;
 
+            $IDT = null;
+            $IDS = null;
+            $IDP = null;
+
             switch ($shipping->get_method_id()) {
+                case "chrono10":
+                    $IDT = "CHRONOPOST";
+                    $IDS = "CHRONO10";
+                    break;
                 case "chrono13":
                     $IDT = "CHRONOPOST";
-                    $IDS = "CHRONOPOST";
+                    $IDS = "CHRONO13";
                     break;
                 case "chronorelais":
                     $IDT = "CHRONOPOST";
-                    $IDS = $shipping->get_instance_id();
+                    $IDS = "CHRONORELAIS";
+                    // Récupération code du point relais
+                    $chronopost = $order->get_meta('_shipping_method_chronorelais');
+                    $IDP = $chronopost['id'] ?? "ERR";
                     break;
                 case "gls_chezvous":
                     $IDT = "GLS";
@@ -260,7 +271,7 @@ class Pixisoft_Connector_Core
 
             $data[32] = $IDT; // transporteur
             $data[33] = $IDS; // méthode de transport
-            //$data[44] = "_IDP_"; // point relais
+            $data[44] = $IDP; // point relais
 
         }
 
