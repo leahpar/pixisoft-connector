@@ -25,6 +25,7 @@ class Pixisoft_Connector_Core
         // Hook de mise à jour du stock
         // Déclenché par CRON
         add_action('px_cron_update_stock', [$this, 'px_update_stock']);
+        add_action('px_cron_update_commandes', [$this, 'px_update_commandes']);
 
         // Hook de mise à jour du plugin
         add_filter('site_transient_update_plugins', [$this, 'px_push_update']);
@@ -304,7 +305,7 @@ class Pixisoft_Connector_Core
         $this->disable_action_new_product = true;
 
         $dir = $this->px_get_ftp_dir('stocks');
-        $files = glob($dir . "/*.txt");
+        $files = glob($dir . "/*.*");
 
         // Parcours des fichiers présents
         foreach ($files as $file) {
@@ -317,8 +318,6 @@ class Pixisoft_Connector_Core
             $cpt = 0;
             while (($data = fgetcsv($f, 0, ";")) !== FALSE) {
 
-                //$sku = $data[2];
-                //$qte = $data[3];
                 list (
                     /* owner */,
                     /* site */,
@@ -342,10 +341,6 @@ class Pixisoft_Connector_Core
                     $product->set_status('draft');
                 }
 
-                //echo "<pre>";
-                //var_dump($data, $sku, $qte, $product_id, $product);
-                //echo "</pre>";
-
                 // Mise à jour du stock
                 $product->set_manage_stock(true);
                 $product->set_stock_quantity($qte);
@@ -359,8 +354,62 @@ class Pixisoft_Connector_Core
 
             Pixisoft_Connector_Core::log("$cpt lignes traitées");
         }
+    }
 
-        //echo '<pre>'; print_r( _get_cron_array() ); echo '</pre>';
+    /**
+     * HOOK de mise à jour des commandes
+     * (déclenché par cron)
+     */
+    function px_update_commandes()
+    {
+        $dir = $this->px_get_ftp_dir('livraisons');
+        $files = glob($dir . "/*.*");
+
+        // Parcours des fichiers présents
+        foreach ($files as $file) {
+
+            Pixisoft_Connector_Core::log("Import fichier commandes $file");
+
+            $f = fopen($file, 'r');
+
+            // 1 ligne par produit
+            $cpt = 0;
+            while (($data = fgetcsv($f, 0, ";")) !== FALSE) {
+
+                $orderId  = $data[2];   // Colonne 3  : OrderNumber
+                $tracking = $data[35];  // Colonne 36 : TrackingTransporteur
+
+                /** @var WC_Order $order */
+                $order = wc_get_order($orderId);
+
+                if (!$order) {
+                    Pixisoft_Connector_Core::log("Commande $orderId non trouvée");
+                    continue;
+                }
+
+                // Import tracking
+                try {
+                    $parcel = new stdClass();
+                    $parcel->skybillNumber = $tracking;
+                    $parcel->imported = true;
+                    WC_Chronopost_Order::add_tracking_numbers($order, [$parcel]);
+                } catch (Exception $e) {
+                    Pixisoft_Connector_Core::log("Erreur tracking #$orderId / $tracking : " . $e->getMessage());
+                }
+
+                // Mise à jour statut (se fera automatiquement par le cron chronopost)
+                // https://woocommerce.com/document/managing-orders/#visual-diagram-to-illustrate-order-statuses
+                // $order->update_status('completed');
+
+                $cpt++;
+            }
+            fclose($f);
+
+            // Suppression du fichier traité
+            unlink($file);
+
+            Pixisoft_Connector_Core::log("$cpt lignes traitées");
+        }
     }
 
     /**
@@ -428,5 +477,7 @@ class Pixisoft_Connector_Core
     }
 
 }
+
+
 
 
