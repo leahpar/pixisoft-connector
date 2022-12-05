@@ -186,9 +186,7 @@ class Pixisoft_Connector_Core
 
         $order = wc_get_order($order_id);
 
-        $dir = $this->px_get_ftp_dir('commandes');
-        $fname = $dir . "/" . "PREP" . $px_owner . date('YmdHis') . ".txt";
-        $f = fopen($fname, "a");
+        $fname = "PREP" . $px_owner . date('YmdHis') . "_" . $order_id . ".txt";
 
         Pixisoft_Connector_Core::log("Traitement commande #$order_id");
 
@@ -201,15 +199,17 @@ class Pixisoft_Connector_Core
         $data[5] = $order->get_date_paid()->format("Ymd");
         $data[6] = $order->get_customer_id();
         $data[7] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
-        $data[8] = $order->get_billing_address_1();
-        $data[9] = $order->get_billing_address_2();
+        // On tronque à 48 caractères (+2 pour les séparateurs) pour Pixisoft
+        $data[8] = substr($order->get_billing_address_1(), 0, 48);
+        $data[9] = substr($order->get_billing_address_2(), 0, 48);
         $data[11] = $order->get_billing_postcode();
         $data[12] = $order->get_billing_city();
         $data[14] = $order->get_billing_country();
         $data[19] = $order->get_customer_id();
         $data[20] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
-        $data[21] = $order->get_shipping_address_1();
-        $data[22] = $order->get_shipping_address_2();
+        // On tronque à 48 caractères (+2 pour les séparateurs) pour Pixisoft
+        $data[21] = substr($order->get_shipping_address_1(), 0, 48);
+        $data[22] = substr($order->get_shipping_address_2(), 0, 48);
         $data[24] = $order->get_shipping_postcode();
         $data[25] = $order->get_shipping_city();
         $data[27] = $order->get_shipping_country();
@@ -276,6 +276,10 @@ class Pixisoft_Connector_Core
 
         }
 
+        Pixisoft_Connector_Core::log("Fichier : $fname");
+        $dir = $this->px_get_ftp_dir('commandes');
+        $f = fopen($dir . "/" . $fname, "a");
+
         // Parcours des lignes de commande
         foreach ($order->get_items('line_item') as $k => $item) {
 
@@ -289,6 +293,8 @@ class Pixisoft_Connector_Core
             $dataLine[37] = $item->get_quantity();
             // NB: 'espace' comme délimiteur car pixisoft veut pas de délimiteur
             fputcsv($f, $dataLine, ';', ' ');
+
+            Pixisoft_Connector_Core::log("\t#$k : ". $item->get_quantity()." x ".$product->get_sku());
         }
 
         fclose($f);
