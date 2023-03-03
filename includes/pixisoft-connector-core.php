@@ -52,6 +52,7 @@ class Pixisoft_Connector_Core
     static public function px_get_ftp_dir($flux)
     {
         if (!in_array($flux, [
+            'archives',
             'articles',
             'stocks',
             'commandes',
@@ -242,6 +243,14 @@ class Pixisoft_Connector_Core
                     // Récupération code du point relais
                     $chronopost = $order->get_meta('_shipping_method_chronorelais');
                     $IDP = $chronopost['id'] ?? "ERR";
+
+                    // Cas particulier Chronorelais
+                    // Nom du client dans le champ contact (28)
+                    $data[28] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
+                    // Nom du point relais dans le champ desstinataire (20)
+                    $data[20] = $chronopost['name'] ?? "ERR";
+                    $data[22] = null;
+
                     break;
                 case "gls_chezvous":
                     $IDT = "GLS";
@@ -378,9 +387,11 @@ class Pixisoft_Connector_Core
 
             $f = fopen($file, 'r');
 
+            $trackings = [];
+
             // 1 ligne par produit
             $cpt = 0;
-            while (($data = fgetcsv($f, 0, ";")) !== FALSE) {
+            while (($data = fgetcsv($f, 0, ";")) !== false) {
 
                 $orderId  = $data[2];   // Colonne 3  : OrderNumber
                 $tracking = $data[35];  // Colonne 36 : TrackingTransporteur
@@ -395,11 +406,18 @@ class Pixisoft_Connector_Core
 
                 // Import tracking
                 try {
+                    // On vérifie si le tracking existe déjà
+                    if (in_array($tracking, $trackings)) continue;
+
                     $parcel = new stdClass();
                     $parcel->skybillNumber = $tracking;
                     $parcel->imported = true;
+                    // plugins/chronopost_1.2.3_for_woocommerce_3.x/includes/class-chronopost-order.php
                     WC_Chronopost_Order::add_tracking_numbers($order, [$parcel]);
-                } catch (Exception $e) {
+
+                    $trackings[] = $tracking;
+                }
+                catch (Exception $e) {
                     Pixisoft_Connector_Core::log("Erreur tracking #$orderId / $tracking : " . $e->getMessage());
                 }
 
@@ -411,7 +429,9 @@ class Pixisoft_Connector_Core
             }
             fclose($f);
 
-            // Suppression du fichier traité
+            // Archiver fichier traité
+            //$archiveDir = $this->px_get_ftp_dir('archives');
+            //rename($file, $archiveDir . '/' . basename($file));
             unlink($file);
 
             Pixisoft_Connector_Core::log("$cpt lignes traitées");
