@@ -200,17 +200,15 @@ class Pixisoft_Connector_Core
         $data[5] = $order->get_date_paid()->format("Ymd");
         $data[6] = $order->get_customer_id();
         $data[7] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
-        // On tronque à 48 caractères (+2 pour les séparateurs) pour Pixisoft
-        $data[8] = substr($order->get_billing_address_1(), 0, 48);
-        $data[9] = substr($order->get_billing_address_2(), 0, 48);
+        $data[8] = $order->get_billing_address_1();
+        $data[9] = $order->get_billing_address_2();
         $data[11] = $order->get_billing_postcode();
         $data[12] = $order->get_billing_city();
         $data[14] = $order->get_billing_country();
         $data[19] = $order->get_customer_id();
         $data[20] = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
-        // On tronque à 48 caractères (+2 pour les séparateurs) pour Pixisoft
-        $data[21] = substr($order->get_shipping_address_1(), 0, 48);
-        $data[22] = substr($order->get_shipping_address_2(), 0, 48);
+        $data[21] = $order->get_shipping_address_1();
+        $data[22] = $order->get_shipping_address_2();
         $data[24] = $order->get_shipping_postcode();
         $data[25] = $order->get_shipping_city();
         $data[27] = $order->get_shipping_country();
@@ -253,6 +251,7 @@ class Pixisoft_Connector_Core
 
                     break;
                 case "gls_chezvous":
+                case "gls_chezvousplus":
                     $IDT = "GLS";
                     $IDS = "GLS";
                     break;
@@ -301,12 +300,38 @@ class Pixisoft_Connector_Core
             $dataLine[36] = $product->get_sku();
             $dataLine[37] = $item->get_quantity();
             // NB: 'espace' comme délimiteur car pixisoft veut pas de délimiteur
-            fputcsv($f, $dataLine, ';', ' ');
+            //fputcsv($f, $dataLine, ';', ' ');
+            $this->fputcsv2($f, $dataLine);
 
             Pixisoft_Connector_Core::log("\t#$k : ". $item->get_quantity()." x ".$product->get_sku());
         }
 
         fclose($f);
+    }
+
+    /**
+     * Custom fputcsv
+     * Ecriture d'une ligne dans un fichier csv
+     * avec ';' comme séparateur, sans délimiteur
+     */
+    private function fputcsv2($handle, $fields)
+    {
+        $delimiter = ';';
+        fwrite($handle, join($delimiter, array_map(
+            fn ($field) => $this->cleanStr($field),
+            $fields
+            )));
+        fwrite($handle, "\n");
+    }
+    private function cleanStr($str)
+    {
+        // On supprime le séparateur csv
+        $str = str_replace(';', '', $str);
+        // On supprime les espaces superflus
+        $str = preg_replace('/\s+/', ' ', $str);
+        // On tronque à 50 caractères pour Pixisoft
+        $strLimit = 50;
+        return substr($str, 0, $strLimit);
     }
 
     /**
@@ -404,24 +429,25 @@ class Pixisoft_Connector_Core
                     continue;
                 }
 
-                // Import tracking
+                // Numéro de suivi déjà traité
+                if (in_array($tracking, $trackings)) continue;
+
+                // Shipping
+                $shippings = $order->get_items('shipping');
+                $shipping = reset($shippings);
+
                 try {
-                    // On vérifie si le tracking existe déjà
-                    if (in_array($tracking, $trackings)) continue;
-
-                    $parcel = new stdClass();
-                    $parcel->skybillNumber = $tracking;
-                    $parcel->imported = true;
-                    // plugins/chronopost_1.2.3_for_woocommerce_3.x/includes/class-chronopost-order.php
-                    WC_Chronopost_Order::add_tracking_numbers($order, [$parcel]);
-
+                    // Import tracking
+                    if (!Tracking_Service::hasTracking($order, $shipping, $tracking)) {
+                        Tracking_Service::addTracking($order, $shipping, $tracking);
+                    }
                     $trackings[] = $tracking;
                 }
                 catch (Exception $e) {
-                    Pixisoft_Connector_Core::log("Erreur tracking #$orderId / $tracking : " . $e->getMessage());
+                    Pixisoft_Connector_Core::log("Commande $orderId : " . $e->getMessage());
                 }
 
-                // Mise à jour statut (se fera automatiquement par le cron chronopost)
+                // Mise à jour statut (se fera automatiquement par les crons des transporteurs)
                 // https://woocommerce.com/document/managing-orders/#visual-diagram-to-illustrate-order-statuses
                 // $order->update_status('completed');
 
